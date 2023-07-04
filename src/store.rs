@@ -47,4 +47,8 @@ where
             // Handle send error gracefully
         }
     }
+
+    pub fn get_state(&self) -> State {
+        self.state.read().clone()
+    }
 }
