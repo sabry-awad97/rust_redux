@@ -10,7 +10,7 @@ use std::{
 use crossbeam_channel::{unbounded, Sender};
 use parking_lot::{Condvar, Mutex, RwLock};
 
-use crate::reducer::Reducer;
+use crate::{reducer::Reducer, selector::Selector};
 
 type Subscriber<T> = Box<dyn Fn(&T) + Send + Sync>;
 type Subscribers<T> = HashMap<usize, Subscriber<T>>;
@@ -87,6 +87,14 @@ where
 
     pub fn get_state(&self) -> State {
         self.state.read().clone()
+    }
+
+    pub fn select<F>(&self, selector: F) -> F::Output
+    where
+        F: Selector<State>,
+    {
+        let state = self.state.read();
+        selector.select(&*state)
     }
 
     pub fn subscribe<F>(&self, callback: F) -> impl Fn() + '_

@@ -28,4 +28,7 @@ fn main() {
     store.dispatch(Action::Increment);
     store.dispatch(Action::Increment);
     store.dispatch(Action::Decrement);
+
+    let counter = store.select(|state: &AppState| state.counter);
+    println!("{:?}", counter);
 }
