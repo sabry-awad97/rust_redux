@@ -10,7 +10,11 @@ use std::{
 use crossbeam_channel::{unbounded, Sender};
 use parking_lot::{Condvar, Mutex, RwLock};
 
-use crate::{reducer::Reducer, selector::Selector};
+use crate::{
+    middleware::{Middleware, StoreMiddleware},
+    reducer::Reducer,
+    selector::Selector,
+};
 
 type Subscriber<T> = Box<dyn Fn(&T) + Send + Sync>;
 type Subscribers<T> = HashMap<usize, Subscriber<T>>;
@@ -119,5 +123,15 @@ where
             condvar.wait(&mut updated);
         }
         *updated = false;
+    }
+
+    pub fn middleware<M>(self, middleware: M) -> StoreMiddleware<State, Action, M>
+    where
+        M: Middleware<State, Action> + Send + Sync + 'static,
+    {
+        StoreMiddleware {
+            inner: self,
+            middleware,
+        }
     }
 }
