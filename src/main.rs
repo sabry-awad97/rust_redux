@@ -1,3 +1,5 @@
+use redux::Store;
+
 #[derive(Debug, Clone, Default)]
 struct AppState {
     counter: i8,
@@ -21,5 +23,10 @@ fn reducer(state: AppState, action: Action) -> AppState {
 }
 
 fn main() {
-    println!("Hello world!");
+    let state = AppState { counter: 0 };
+    let store = Store::new_with_state(state, reducer);
+    store.dispatch(Action::Increment);
+    store.dispatch(Action::Increment);
+    store.dispatch(Action::Increment);
+    store.dispatch(Action::Decrement);
 }
