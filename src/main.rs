@@ -11,7 +11,7 @@ enum Action {
     Decrement,
 }
 
-fn reducer(state: AppState, action: Action) -> AppState {
+fn reducer(state: &AppState, action: Action) -> AppState {
     match action {
         Action::Increment => AppState {
             counter: state.counter + 1,
