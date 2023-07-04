@@ -8,7 +8,7 @@ use std::{
 };
 
 use crossbeam_channel::{unbounded, Sender};
-use parking_lot::RwLock;
+use parking_lot::{Condvar, Mutex, RwLock};
 
 use crate::reducer::Reducer;
 
@@ -19,6 +19,7 @@ pub struct Store<State, Action> {
     dispatcher: Sender<Action>,
     subscribers: Arc<RwLock<Subscribers<State>>>,
     next_subscriber_id: Arc<AtomicUsize>,
+    condvar: Arc<(Mutex<bool>, Condvar)>,
 }
 
 impl<State, Action> Store<State, Action>
@@ -41,10 +42,13 @@ where
         let state = Arc::new(RwLock::new(initial_state));
         let subscribers: Arc<RwLock<Subscribers<State>>> = Arc::new(RwLock::new(HashMap::new()));
         let next_subscriber_id = Arc::new(AtomicUsize::new(0));
+        let condvar = Arc::new((Mutex::new(false), Condvar::new()));
+
         let (dispatcher, receiver) = unbounded();
 
         let cloned_state = state.clone();
         let cloned_subscribers = subscribers.clone();
+        let cloned_condvar = condvar.clone();
 
         thread::spawn(move || {
             while let Ok(action) = receiver.recv() {
@@ -56,6 +60,11 @@ where
                 for subscriber in subscriber_map.values() {
                     subscriber(&*state);
                 }
+
+                let (lock, condvar) = &*cloned_condvar;
+                let mut updated = lock.lock();
+                *updated = true;
+                condvar.notify_one();
             }
         });
 
@@ -64,6 +73,7 @@ where
             dispatcher,
             subscribers,
             next_subscriber_id,
+            condvar,
         }
     }
 
@@ -71,6 +81,8 @@ where
         if self.dispatcher.send(action).is_err() {
             // Handle send error gracefully
         }
+
+        self.wait_for_update()
     }
 
     pub fn get_state(&self) -> State {
@@ -90,5 +102,14 @@ where
     fn unsubscribe(&self, subscriber_id: usize) {
         let mut subscriber_map = self.subscribers.write();
         subscriber_map.remove(&subscriber_id);
+    }
+
+    fn wait_for_update(&self) {
+        let (lock, condvar) = &*self.condvar;
+        let mut updated = lock.lock();
+        while !*updated {
+            condvar.wait(&mut updated);
+        }
+        *updated = false;
     }
 }
