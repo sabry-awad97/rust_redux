@@ -14,6 +14,14 @@ where
     State: Send + Sync + Clone + 'static,
     Action: Send + 'static,
 {
+    pub fn new<R>(root_reducer: R) -> Self
+    where
+        R: Reducer<State, Action> + Send + 'static,
+        State: Default,
+    {
+        Self::new_with_state(Default::default(), root_reducer)
+    }
+    
     pub fn new_with_state<R>(initial_state: State, root_reducer: R) -> Self
     where
         R: Reducer<State, Action> + Send + 'static,

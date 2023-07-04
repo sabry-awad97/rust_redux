@@ -23,8 +23,7 @@ fn reducer(state: AppState, action: Action) -> AppState {
 }
 
 fn main() {
-    let state = AppState { counter: 0 };
-    let store = Store::new_with_state(state, reducer);
+    let store = Store::new(reducer);
     store.dispatch(Action::Increment);
     store.dispatch(Action::Increment);
     store.dispatch(Action::Increment);
