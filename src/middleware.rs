@@ -1,11 +1,14 @@
-use crate::Store;
+use crate::{store_api::StoreApi, Store};
 
 pub trait Middleware<State, Action>
 where
     State: Send + Sync + Clone + 'static,
     Action: Send + 'static,
 {
-    fn dispatch(&self, get_state: impl Fn() -> State, action: Action, next: impl Fn(Action));
+    fn dispatch<StoreImpl, NextFn>(&self, store: &StoreImpl, action: Action, next: NextFn)
+    where
+        StoreImpl: StoreApi<State, Action>,
+        NextFn: Fn(Action);
 }
 
 pub struct StoreMiddleware<State, Action, M>
@@ -25,8 +28,7 @@ where
     M: Middleware<State, Action> + Send + Sync + 'static,
 {
     pub fn dispatch(&self, action: Action) {
-        let get_state = || self.inner.get_state();
-        self.middleware.dispatch(get_state, action, |action| {
+        self.middleware.dispatch(&self.inner, action, |action| {
             self.inner.dispatch(action);
         });
     }

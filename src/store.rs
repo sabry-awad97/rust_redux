@@ -14,6 +14,7 @@ use crate::{
     middleware::{Middleware, StoreMiddleware},
     reducer::Reducer,
     selector::Selector,
+    StoreApi,
 };
 
 type Subscriber<T> = Box<dyn Fn(&T) + Send + Sync>;
@@ -81,26 +82,6 @@ where
         }
     }
 
-    pub fn dispatch(&self, action: Action) {
-        if self.dispatcher.send(action).is_err() {
-            // Handle send error gracefully
-        }
-
-        self.wait_for_update()
-    }
-
-    pub fn get_state(&self) -> State {
-        self.state.read().clone()
-    }
-
-    pub fn select<F>(&self, selector: F) -> F::Output
-    where
-        F: Selector<State>,
-    {
-        let state = self.state.read();
-        selector.select(&*state)
-    }
-
     pub fn subscribe<F>(&self, callback: F) -> impl Fn() + '_
     where
         F: Fn(&State) + Send + Sync + 'static,
@@ -133,5 +114,31 @@ where
             inner: self,
             middleware,
         }
+    }
+}
+
+impl<State, Action> StoreApi<State, Action> for Store<State, Action>
+where
+    State: Send + Sync + Clone + 'static,
+    Action: Send + 'static,
+{
+    fn dispatch(&self, action: Action) {
+        if self.dispatcher.send(action).is_err() {
+            // Handle send error gracefully
+        }
+
+        self.wait_for_update()
+    }
+
+    fn get_state(&self) -> State {
+        self.state.read().clone()
+    }
+
+    fn select<F>(&self, selector: F) -> F::Output
+    where
+        F: Selector<State>,
+    {
+        let state = self.state.read();
+        selector.select(&*state)
     }
 }

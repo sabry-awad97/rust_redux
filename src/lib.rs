@@ -7,3 +7,4 @@ mod store_api;
 pub use middleware::Middleware;
 pub use reducer::Reducer;
 pub use store::Store;
+pub use store_api::StoreApi;

@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use redux::{Middleware, Store};
+use redux::{Middleware, Store, StoreApi};
 
 #[derive(Debug, Clone, Default)]
 struct AppState {
@@ -31,16 +31,21 @@ where
     State: Send + Sync + Clone + Debug + 'static,
     Action: Send + 'static,
 {
-    fn dispatch(&self, get_state: impl Fn() -> State, action: Action, next: impl Fn(Action)) {
-        let state_before = get_state();
+    fn dispatch<StoreImpl, NextFn>(&self, store: &StoreImpl, action: Action, next: NextFn)
+    where
+        StoreImpl: StoreApi<State, Action>,
+        NextFn: Fn(Action),
+    {
+        let state_before = store.get_state();
         println!("Before dispatch: {:?}", state_before);
 
         next(action);
 
-        let state_after = get_state();
+        let state_after = store.get_state();
         println!("After dispatch: {:?}", state_after);
     }
 }
+
 fn main() {
     let store = Store::new(reducer).middleware(LoggingMiddleware);
     store.dispatch(Action::Increment);
